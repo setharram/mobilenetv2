@@ -15,7 +15,7 @@ import os
 datst_pt = '/home/ram/Documents/opencv/face-recognition-opencv/dataset'
 face_cascade = cv.CascadeClassifier('haarcascade_frontalface_default.xml')
 dataset_labels = ['alan_grant','claire_dearing','ellie_sattler','ian_malcolm','john_hammond','owengrady']
-tf_model = '/home/ram/Documents/opencv/face-recognition-opencv/zurassic_clasfy-tes/converted_model.tflite'
+tf_model = 'mobilenetV2.tflite'
 
 def classify_image(image,modl,labels):
      # Load TFLite model and allocate tensors.
@@ -33,10 +33,14 @@ def classify_image(image,modl,labels):
 
      # Use `tensor()` in order to get a pointer to the tensor.
      tflite_results = interpreter.get_tensor(output_details[0]['index'])
-     print(tf.keras.layers.Softmax(tflite_results))
+     # calculating probabilities
+     tf_exp = np.exp(tflite_results - np.max(tflite_results))
+     prob = tf_exp/tf_exp.sum()
+     # extract text labels
      predicted_ids = np.argmax(tflite_results, axis=-1)
-     print(labels[predicted_ids[0]])
-     return labels[predicted_ids[0]]
+     # print(prob[0][predicted_ids[0]])
+     # print(labels[predicted_ids[0]])
+     return labels[predicted_ids[0]],prob[0][predicted_ids[0]]
      
 for fil in os.listdir(datst_pt):
      for imag in os.listdir(datst_pt+'/'+fil):
@@ -47,12 +51,15 @@ for fil in os.listdir(datst_pt):
           
           faces = face_cascade.detectMultiScale(image, 1.1, 4)
           
-          nam = classify_image(image, tf_model, dataset_labels)
-          
+          name,prob = classify_image(image, tf_model, dataset_labels)
+          prob = str(round(prob,2))
+          print(name,prob)
           for (x,y,w,h) in faces:
                cv.rectangle(image,(x,y),(x+w,y+h),(255,0,0),2)
-               cv.putText(image, nam,\
-                      (x, y), cv.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
+               cv.putText(image, name,\
+                       (x, y), cv.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
+               cv.putText(image, prob,\
+                       (x, y+h), cv.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
           
           image = cv.resize(image,(512,512))
           cv.imshow("Image", image)
