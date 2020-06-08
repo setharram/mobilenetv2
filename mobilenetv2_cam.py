@@ -11,20 +11,24 @@ import tensorflow as tf
 import numpy as np
 
 cap = cv.VideoCapture(0)
+
 cap.set(3, 640) # set video width
 cap.set(4, 480) # set video height
+cap.set(5, 1) # set FPS to 20
 
 
 if not cap.isOpened():
     print("Cannot open camera")
     exit()
 
-face_cascade = cv.CascadeClassifier('haarcascade_frontalface_default.xml')
-eye_cascade = cv.CascadeClassifier('haarcascade_eye.xml')
+face_cascade = cv.CascadeClassifier('lib/haarcascade_frontalface_default.xml')
+eye_cascade = cv.CascadeClassifier('lib/haarcascade_eye.xml')
 
 # init tensorflow 
-dataset_labels = ['alan_grant','claire_dearing','ellie_sattler','ian_malcolm','john_hammond','owengrady']
-tf_model = 'mobilenetV2.tflite'
+#dataset_labels = ['alan_grant','claire_dearing','ellie_sattler','ian_malcolm','john_hammond','owengrady']
+dataset_labels = np.arange(100)
+#tf_model = 'lib/zurassic_mobilenetV2.tflite'
+tf_model = 'lib/IMFBD.tflite'
 
 def classify_image(image,modl,labels):
      # Load TFLite model and allocate tensors.
@@ -65,8 +69,9 @@ while True:
     
     # call tensorflow lite interpreter
     name,prob = classify_image(image, tf_model, dataset_labels)
-    prob = str(round(prob,2))
-    print(name,prob)
+    sprob = str(round(prob,2))
+    name = str(name)
+    print(name,sprob)
     
     for (x,y,w,h) in faces:
         cv.rectangle(image,(x,y),(x+w,y+h),(255,0,0),2)
@@ -76,13 +81,14 @@ while True:
         eyes = eye_cascade.detectMultiScale(roi_gray)
         for (ex,ey,ew,eh) in eyes:
             cv.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0),2)
-            cv.putText(image, name,\
+            if prob > 0.3:
+                 cv.putText(image, name,\
                        (x, y), cv.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
-            cv.putText(image, prob,\
+                 cv.putText(image, sprob,\
                        (x, y+h), cv.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)
     # Display the resulting frame
     cv.imshow('face detection', image)
-    if cv.waitKey(1) == ord('q'):
+    if cv.waitKey(500) == ord('q'):
         break
 # When everything done, release the capture
 cap.release()   
